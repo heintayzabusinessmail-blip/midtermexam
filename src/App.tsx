@@ -3,7 +3,6 @@ import DetailedResultView from './DetailedResultView';
 import TeacherPortal, { saveSingleSubmission, evaluateCEFR } from './TeacherPortal';
 import CircularProgressIndicator from './CircularProgressIndicator';
 import EssayWordCountGauge from './EssayWordCountGauge';
-import WritingHelper from './WritingHelper';
 import {
   CONFIG,
   PARTS,
@@ -123,10 +122,70 @@ export default function App() {
   const [passageOpen, setPassageOpen] = useState<boolean>(true);
   const [timeLeft, setTimeLeft] = useState<number>(CONFIG.minutes * 60);
 
-  const camVideoRef = useRef<HTMLVideoElement | null>(null);
+  const examCamVideoRef = useRef<HTMLVideoElement | null>(null);
+  const floatCamVideoRef = useRef<HTMLVideoElement | null>(null);
   const camPrevRef = useRef<HTMLVideoElement | null>(null);
   const hiddenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
+  const [floatCamMinimized, setFloatCamMinimized] = useState<boolean>(false);
+
+  // Helper to ensure media stream is connected and playing on a video element
+  const attachMediaStream = useCallback((videoEl: HTMLVideoElement | null, stream: MediaStream | null) => {
+    if (!videoEl) return;
+    try {
+      if (videoEl.srcObject !== stream) {
+        videoEl.srcObject = stream;
+      }
+      if (stream) {
+        videoEl.play().catch(() => {});
+      }
+    } catch (e) {}
+  }, []);
+
+  // Callback refs to instantly link video elements as soon as they mount into DOM
+  const setExamCamRef = useCallback(
+    (el: HTMLVideoElement | null) => {
+      examCamVideoRef.current = el;
+      if (el && camStream) {
+        attachMediaStream(el, camStream);
+      }
+    },
+    [camStream, attachMediaStream]
+  );
+
+  const setFloatCamRef = useCallback(
+    (el: HTMLVideoElement | null) => {
+      floatCamVideoRef.current = el;
+      if (el && camStream) {
+        attachMediaStream(el, camStream);
+      }
+    },
+    [camStream, attachMediaStream]
+  );
+
+  const setCamPrevRef = useCallback(
+    (el: HTMLVideoElement | null) => {
+      camPrevRef.current = el;
+      if (el && camStream) {
+        attachMediaStream(el, camStream);
+      }
+    },
+    [camStream, attachMediaStream]
+  );
+
+  // Synchronize stream whenever camStream or screen view changes
+  useEffect(() => {
+    if (camStream) {
+      attachMediaStream(camPrevRef.current, camStream);
+      attachMediaStream(examCamVideoRef.current, camStream);
+      attachMediaStream(floatCamVideoRef.current, camStream);
+    }
+  }, [camStream, screen, attachMediaStream]);
+
+  // Subtle essay auto-save feedback state
+  const [essaySaveStatus, setEssaySaveStatus] = useState<'idle' | 'typing' | 'saved'>('idle');
+  const [essaySavedAt, setEssaySavedAt] = useState<string | null>(null);
+  const essaySaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Save to LocalStorage
   const saveState = useCallback((next: Partial<ExamState>) => {
@@ -137,6 +196,32 @@ export default function App() {
       } catch (e) {}
       return updated;
     });
+  }, []);
+
+  // Auto-save debounced handler for essay writing (triggers 'Saved' 3s after user stops typing)
+  const handleEssayChange = useCallback(
+    (val: string, questionIdx: number) => {
+      saveState({ ans: { ...state.ans, [questionIdx]: val } });
+      setEssaySaveStatus('typing');
+      if (essaySaveTimerRef.current) {
+        clearTimeout(essaySaveTimerRef.current);
+      }
+      essaySaveTimerRef.current = setTimeout(() => {
+        setEssaySaveStatus('saved');
+        setEssaySavedAt(
+          new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        );
+      }, 3000);
+    },
+    [state.ans, saveState]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (essaySaveTimerRef.current) {
+        clearTimeout(essaySaveTimerRef.current);
+      }
+    };
   }, []);
 
   const toast = useCallback((msg: string) => {
@@ -198,7 +283,7 @@ export default function App() {
   // Snapshot capture helper
   const capturePhoto = useCallback((tag: string) => {
     try {
-      const v = camVideoRef.current || camPrevRef.current;
+      const v = examCamVideoRef.current || floatCamVideoRef.current || camPrevRef.current;
       const c = hiddenCanvasRef.current;
       if (!v || !c || !v.videoWidth) return;
       c.width = 320;
@@ -228,13 +313,31 @@ export default function App() {
       return false;
     }
     try {
+      // Re-use active stream if already available with live video tracks
+      if (camStream && camStream.active && camStream.getVideoTracks().some((t) => t.readyState === 'live')) {
+        attachMediaStream(camPrevRef.current, camStream);
+        attachMediaStream(examCamVideoRef.current, camStream);
+        attachMediaStream(floatCamVideoRef.current, camStream);
+        setCamStatusText('Camera is on. Keep your face visible.');
+        return true;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 480, height: 360, facingMode: 'user' },
         audio: false,
       });
+
+      stream.getVideoTracks().forEach((track) => {
+        track.onended = () => {
+          setCamStream(null);
+        };
+      });
+
       setCamStream(stream);
-      if (camPrevRef.current) camPrevRef.current.srcObject = stream;
-      if (camVideoRef.current) camVideoRef.current.srcObject = stream;
+      attachMediaStream(camPrevRef.current, stream);
+      attachMediaStream(examCamVideoRef.current, stream);
+      attachMediaStream(floatCamVideoRef.current, stream);
+
       setCamStatusText('Camera is on. Keep your face visible.');
       setCanStartExam(true);
       setStartBtnText('Start examination →');
@@ -263,6 +366,9 @@ export default function App() {
     if (camStream) {
       camStream.getTracks().forEach((t) => t.stop());
       setCamStream(null);
+      attachMediaStream(camPrevRef.current, null);
+      attachMediaStream(examCamVideoRef.current, null);
+      attachMediaStream(floatCamVideoRef.current, null);
     }
   };
 
@@ -948,7 +1054,7 @@ export default function App() {
                 </div>
                 <div className="flex items-center gap-4 flex-wrap">
                   <video
-                    ref={camPrevRef}
+                    ref={setCamPrevRef}
                     autoPlay
                     playsInline
                     muted
@@ -984,6 +1090,9 @@ export default function App() {
                       endAt: now + CONFIG.minutes * 60000,
                     });
                     setScreen('exam');
+                    if (!camStream) {
+                      startWebcam();
+                    }
                   }}
                   disabled={!canStartExam}
                   className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-[#2DD4A7] to-[#7C6FF0] text-[#08111F] font-black text-sm transition hover:opacity-95 disabled:opacity-40 shadow-lg shadow-teal-500/20"
@@ -1433,70 +1542,75 @@ export default function App() {
                           maxWords={currentQ.max || 180}
                         />
 
-                        {/* Interactive Writing Assistant & Scaffolding Helper */}
-                        <WritingHelper
-                          currentText={state.ans[state.idx] || ''}
-                          onUpdateText={(newText) => {
-                            saveState({ ans: { ...state.ans, [state.idx]: newText } });
-                          }}
-                          minWords={currentQ.min || 120}
-                          maxWords={currentQ.max || 180}
-                        />
-
-                        {/* Textarea for Writing */}
+                        {/* Textarea for Writing with Subtle Corner 'Saved' Indicator */}
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs text-[var(--ink3)]">
-                            <span className="font-semibold text-[var(--ink2)]">Your Essay Draft:</span>
+                          <div className="flex items-center justify-between text-xs text-[var(--ink3)] flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-[var(--ink2)]">Your Essay Draft:</span>
+                              {/* Header subtle status feedback */}
+                              {essaySaveStatus === 'typing' && (
+                                <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-500/90 font-medium animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                  <span>Saving…</span>
+                                </span>
+                              )}
+                              {essaySaveStatus === 'saved' && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[11px] font-bold animate-fade-in">
+                                  <span className="text-emerald-500 text-xs">✓</span>
+                                  <span>Saved</span>
+                                  {essaySavedAt && <span className="opacity-75 font-mono text-[10px]">({essaySavedAt})</span>}
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[11px] text-[var(--ink3)]">
-                              Use paragraphs with line breaks for clarity
+                              Auto-saved to your device
                             </span>
                           </div>
-                          <textarea
-                            rows={12}
-                            value={state.ans[state.idx] || ''}
-                            onChange={(e) => {
-                              saveState({ ans: { ...state.ans, [state.idx]: e.target.value } });
-                            }}
-                            placeholder="Type your essay here… Begin with an introductory sentence, develop your ideas with clear reasons, and conclude with your own perspective."
-                            className={`w-full bg-[var(--card2)] border rounded-2xl p-4 sm:p-5 text-xs sm:text-sm outline-none leading-relaxed transition-all duration-300 font-sans ${
-                              (() => {
-                                const wc = (state.ans[state.idx] || '').trim().split(/\s+/).filter(Boolean).length;
-                                if (wc >= (currentQ.min || 120) && wc <= (currentQ.max || 180)) {
-                                  return 'border-emerald-500/60 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20';
-                                }
-                                if (wc > (currentQ.max || 180)) {
-                                  return 'border-amber-500/60 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20';
-                                }
-                                if (wc > 0) {
-                                  return 'border-rose-400/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20';
-                                }
-                                return 'border-[var(--line)] focus:border-[var(--teal)]';
-                              })()
-                            }`}
-                          />
-                        </div>
 
-                        {/* Essay Writing Guidelines & Structure Checklist */}
-                        <div className="bg-[var(--card)] border border-[var(--line)] rounded-xl p-3.5 text-xs text-[var(--ink2)] space-y-1.5">
-                          <div className="font-extrabold text-[var(--teal)] flex items-center gap-1.5">
-                            <span>💡</span> Cambridge B2 Essay Structure Checklist:
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1 text-[var(--ink3)]">
-                            <div className="flex items-start gap-1.5">
-                              <span className="text-[var(--teal)] font-bold">1.</span>
-                              <span><b>Introduction:</b> Rephrase the prompt and state that there are two sides.</span>
-                            </div>
-                            <div className="flex items-start gap-1.5">
-                              <span className="text-[var(--teal)] font-bold">2.</span>
-                              <span><b>Arguments For:</b> Present points supporting the view with reasons.</span>
-                            </div>
-                            <div className="flex items-start gap-1.5">
-                              <span className="text-[var(--teal)] font-bold">3.</span>
-                              <span><b>Arguments Against:</b> Provide counter-arguments or alternative view.</span>
-                            </div>
-                            <div className="flex items-start gap-1.5">
-                              <span className="text-[var(--teal)] font-bold">4.</span>
-                              <span><b>Conclusion:</b> Summarize both sides and give your clear opinion.</span>
+                          <div className="relative">
+                            <textarea
+                              rows={12}
+                              value={state.ans[state.idx] || ''}
+                              onChange={(e) => {
+                                handleEssayChange(e.target.value, state.idx);
+                              }}
+                              placeholder="Type your essay here… Begin with an introductory sentence, develop your ideas with clear reasons, and conclude with your own perspective."
+                              className={`w-full bg-[var(--card2)] border rounded-2xl p-4 sm:p-5 pb-12 sm:pb-12 text-xs sm:text-sm outline-none leading-relaxed transition-all duration-300 font-sans ${
+                                (() => {
+                                  const wc = (state.ans[state.idx] || '').trim().split(/\s+/).filter(Boolean).length;
+                                  if (wc >= (currentQ.min || 120) && wc <= (currentQ.max || 180)) {
+                                    return 'border-emerald-500/60 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20';
+                                  }
+                                  if (wc > (currentQ.max || 180)) {
+                                    return 'border-amber-500/60 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20';
+                                  }
+                                  if (wc > 0) {
+                                    return 'border-rose-400/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20';
+                                  }
+                                  return 'border-[var(--line)] focus:border-[var(--teal)]';
+                                })()
+                              }`}
+                            />
+
+                            {/* Corner 'Saved' Notification in the corner of the writing area */}
+                            <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 pointer-events-none select-none transition-all duration-300 z-10">
+                              {essaySaveStatus === 'typing' && (
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--card)]/90 backdrop-blur-md border border-[var(--line)] shadow-sm text-[11px] font-medium text-[var(--ink3)] animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                                  <span>Saving changes…</span>
+                                </div>
+                              )}
+                              {essaySaveStatus === 'saved' && (
+                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 backdrop-blur-md border border-emerald-500/30 shadow-md text-[11px] font-bold text-emerald-600 dark:text-emerald-400 animate-fade-in">
+                                  <span className="text-emerald-500 text-xs">✓</span>
+                                  <span>Saved</span>
+                                  {essaySavedAt && (
+                                    <span className="text-[10px] opacity-75 font-mono text-emerald-700 dark:text-emerald-300">
+                                      • {essaySavedAt}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1519,9 +1633,9 @@ export default function App() {
                       {state.photos?.length || 0} snapshots
                     </span>
                   </div>
-                  <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-black border border-[var(--line2)]">
+                  <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-black border border-[var(--line2)] shadow-inner">
                     <video
-                      ref={camVideoRef}
+                      ref={setExamCamRef}
                       autoPlay
                       playsInline
                       muted
@@ -1529,12 +1643,12 @@ export default function App() {
                     />
                     {!camStream && (
                       <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-3 text-center">
-                        <span className="text-xs text-amber-400 font-bold mb-1.5">Camera feed paused</span>
+                        <span className="text-xs text-amber-400 font-bold mb-1.5">Camera feed is off</span>
                         <button
                           onClick={startWebcam}
-                          className="px-2.5 py-1 rounded bg-[var(--teal)] text-[#08111F] text-[0.68rem] font-extrabold"
+                          className="px-3 py-1.5 rounded-lg bg-[var(--teal)] text-[#08111F] text-xs font-black hover:opacity-90 transition flex items-center gap-1.5 shadow-md shadow-teal-500/20"
                         >
-                          Reconnect Camera
+                          <span>📷</span> Turn On Camera
                         </button>
                       </div>
                     )}
@@ -1729,13 +1843,55 @@ export default function App() {
         )}
       </main>
 
-      {/* Floating Proctoring Webcam during exam */}
-      {screen === 'exam' && camStream && (
-        <div className="fixed right-4 bottom-20 z-50 w-32 rounded-xl overflow-hidden border-2 border-[var(--teal)] shadow-2xl bg-black no-print">
-          <div className="absolute top-1.5 left-1.5 bg-[var(--pink)] text-white text-[0.55rem] font-black px-1.5 py-0.5 rounded-full flex items-center gap-1 z-10">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" /> REC
-          </div>
-          <video ref={camVideoRef} autoPlay playsInline muted className="w-full aspect-[4/3] object-cover -scale-x-100" />
+      {/* Floating Proctoring Webcam during exam (allows candidates to always see themselves anywhere on page) */}
+      {screen === 'exam' && (
+        <div className="fixed right-3 sm:right-5 bottom-4 sm:bottom-6 z-50 no-print select-none">
+          {floatCamMinimized ? (
+            <button
+              onClick={() => setFloatCamMinimized(false)}
+              className="flex items-center gap-2 px-3 py-2 rounded-full bg-[var(--card)]/95 backdrop-blur-md border border-[var(--teal)] shadow-2xl text-xs font-black text-[var(--teal)] hover:bg-[var(--teal)] hover:text-[#08111F] transition"
+              title="Expand live camera view"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>📷 Camera View</span>
+            </button>
+          ) : (
+            <div className="w-36 sm:w-44 rounded-2xl overflow-hidden border-2 border-[var(--teal)] shadow-2xl bg-black transition-all">
+              <div className="bg-slate-950/85 px-2.5 py-1.5 flex items-center justify-between text-[0.62rem] font-bold text-white border-b border-slate-800">
+                <span className="flex items-center gap-1.5 text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span>YOU (LIVE)</span>
+                </span>
+                <button
+                  onClick={() => setFloatCamMinimized(true)}
+                  className="text-slate-400 hover:text-white px-1 font-bold text-xs"
+                  title="Minimize camera overlay"
+                >
+                  —
+                </button>
+              </div>
+              <div className="relative aspect-[4/3] w-full bg-slate-900">
+                <video
+                  ref={setFloatCamRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover -scale-x-100"
+                />
+                {!camStream && (
+                  <div className="absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-2 text-center">
+                    <span className="text-[10px] text-amber-300 font-bold mb-1">Camera off</span>
+                    <button
+                      onClick={startWebcam}
+                      className="px-2 py-1 rounded bg-[var(--teal)] text-[#08111F] text-[10px] font-black"
+                    >
+                      Turn On
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
