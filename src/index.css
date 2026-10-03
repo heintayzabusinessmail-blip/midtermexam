@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0B1220;
+  --bg2: #0E1729;
+  --card: #151E36;
+  --card2: #1B2645;
+  --card3: #202C4F;
+  --line: rgba(255,255,255,0.08);
+  --line2: rgba(255,255,255,0.16);
+  --ink: #E8EEF9;
+  --ink2: #9FB0C9;
+  --ink3: #6B7C99;
+  --teal: #2DD4A7;
+  --teal2: #14B894;
+  --tealsoft: rgba(45,212,167,0.13);
+  --gold: #F5C542;
+  --goldsoft: rgba(245,197,66,0.12);
+  --purple: #7C6FF0;
+  --purple2: #5B4FD6;
+  --purplesoft: rgba(124,111,240,0.15);
+  --pink: #F0568C;
+  --orange: #F79433;
+  --green: #34D399;
+  --red: #F2607A;
+  --redsoft: rgba(242,96,122,0.14);
+  --grad: linear-gradient(90deg, #2DD4A7 0%, #7C6FF0 100%);
+  --gradflag: linear-gradient(90deg, #F79433 0%, #F0568C 100%);
+  --gradsub: linear-gradient(90deg, #7C6FF0 0%, #5B4FD6 100%);
+  --r: 16px;
+  --r2: 12px;
+  --r3: 10px;
+  --sh: 0 10px 34px rgba(0,0,0,0.32);
+  --fs: 1;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+html[data-theme="light"] {
+  --bg: #F4F7FC;
+  --bg2: #EAF0F9;
+  --card: #FFFFFF;
+  --card2: #F3F6FC;
+  --card3: #E9EFF9;
+  --line: rgba(18,32,60,0.10);
+  --line2: rgba(18,32,60,0.20);
+  --ink: #132038;
+  --ink2: #4C5D78;
+  --ink3: #7C8CA6;
+  --teal: #0E9F7C;
+  --teal2: #0B8467;
+  --tealsoft: rgba(14,159,124,0.12);
+  --gold: #B8860B;
+  --goldsoft: rgba(184,134,11,0.12);
+  --purple: #5B4FD6;
+  --purplesoft: rgba(91,79,214,0.12);
+  --sh: 0 8px 26px rgba(18,32,60,0.10);
+}
+
+html.hc {
+  --line: rgba(255,255,255,0.28);
+  --line2: rgba(255,255,255,0.45);
+  --ink2: #D2DEEE;
+  --ink3: #A9BBD3;
+}
+
+html[data-theme="light"].hc {
+  --line: rgba(18,32,60,0.35);
+  --line2: rgba(18,32,60,0.55);
+  --ink2: #26364F;
+  --ink3: #3C4E6B;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: calc(16px * var(--fs));
+}
+
+body {
+  background: radial-gradient(1200px 600px at 50% -10%, var(--bg2), var(--bg)) fixed, var(--bg);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.55;
+  overflow-x: hidden;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+.lock {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.anim-fade {
+  animation: fade 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media print {
+  .no-print, nav, header button, .exam-topbar-actions { display: none !important; }
+  body, html {
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+  }
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    color: #111827 !important;
+  }
+  .bg-\[var\(--card\)\], .bg-\[var\(--card2\)\], .bg-\[var\(--card3\)\] {
+    background: #ffffff !important;
+    border-color: #e5e7eb !important;
+  }
+  .border-\[var\(--line\)\], .border-\[var\(--line2\)\] {
+    border-color: #d1d5db !important;
+  }
+  .text-\[var\(--ink2\)\], .text-\[var\(--ink3\)\] {
+    color: #4b5563 !important;
+  }
+  .text-\[var\(--teal\)\], .text-\[var\(--purple\)\], .text-\[var\(--gold\)\] {
+    color: #1f2937 !important;
+    font-weight: 700 !important;
+  }
+  .page-break {
+    page-break-before: always;
+  }
+  table, tr, td, th {
+    border-color: #d1d5db !important;
+    color: #111827 !important;
+  }
+}

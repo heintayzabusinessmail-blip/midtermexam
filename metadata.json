@@ -1,0 +1,6 @@
+{
+  "name": "Heinfinity English - Empower B2 Mid-Term Exam",
+  "description": "Cambridge Empower B2 Units 1–5 Mid-Term Exam featuring interactive Reading, Grammar, Vocabulary, Writing, Pronunciation, Communication, YouTube video listening (Relationship Dilemmas), Essay writing, proctoring camera, and teacher grading dashboard.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
