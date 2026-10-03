@@ -114,37 +114,161 @@ body {
 }
 
 @media print {
-  .no-print, nav, header button, .exam-topbar-actions { display: none !important; }
-  body, html {
-    background: #ffffff !important;
-    color: #111827 !important;
-    font-size: 11pt !important;
-    line-height: 1.4 !important;
+  /* 1. Reset color tokens for print rendering */
+  :root, html, body {
+    --bg: #ffffff !important;
+    --bg2: #ffffff !important;
+    --card: #ffffff !important;
+    --card2: #ffffff !important;
+    --card3: #ffffff !important;
+    --line: #e5e7eb !important;
+    --line2: #d1d5db !important;
+    --ink: #111827 !important;
+    --ink2: #374151 !important;
+    --ink3: #4b5563 !important;
+    --tealsoft: #f9fafb !important;
+    --goldsoft: #f9fafb !important;
+    --purplesoft: #f9fafb !important;
+    --redsoft: #f9fafb !important;
   }
-  * {
+
+  /* 2. Page & Typography Setup */
+  @page {
+    margin: 14mm 16mm;
+    size: auto;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    background-image: none !important;
+    color: #111827 !important;
+    font-size: 10.5pt !important;
+    line-height: 1.45 !important;
+    overflow: visible !important;
+  }
+
+  /* 3. Hide all navigation elements */
+  nav,
+  [role="navigation"],
+  .no-print,
+  .exam-topbar-actions,
+  .navigation,
+  header button,
+  nav button,
+  .nav-tabs,
+  .pagination,
+  [data-nav],
+  .student-bottom-bar,
+  aside,
+  header .flex.items-center.gap-2,
+  .tab-btn,
+  button[role="tab"] {
+    display: none !important;
+  }
+
+  /* 4. Hide all modal buttons and interactive modal controls */
+  [role="dialog"] button,
+  .modal button,
+  .modal-action,
+  .modal-footer,
+  .modal-buttons,
+  button[aria-label="Close"],
+  .modal-close,
+  button:has(svg.modal-close),
+  .toast,
+  [role="alert"],
+  [role="status"] {
+    display: none !important;
+  }
+
+  /* 5. Hide the proctoring camera feed & live recording indicators */
+  video,
+  canvas,
+  .proctoring-feed,
+  .camera-feed,
+  .cam-widget,
+  .camera-preview,
+  .rec-badge,
+  [data-proctoring],
+  div:has(> video),
+  .fixed:has(video) {
+    display: none !important;
+  }
+
+  /* 6. Force clean white background for all content areas & containers */
+  *,
+  *::before,
+  *::after {
     box-shadow: none !important;
     text-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  html, body, #root, main, div, section, article,
+  .bg-\[var\(--card\)\], .bg-\[var\(--card2\)\], .bg-\[var\(--card3\)\],
+  .bg-\[var\(--bg\)\], .bg-\[var\(--bg2\)\],
+  [class*="bg-"] {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    background-image: none !important;
+  }
+
+  /* 7. High contrast text & clean borders */
+  p, span, h1, h2, h3, h4, h5, h6, li, td, th, label, div {
     color: #111827 !important;
   }
-  .bg-\[var\(--card\)\], .bg-\[var\(--card2\)\], .bg-\[var\(--card3\)\] {
-    background: #ffffff !important;
-    border-color: #e5e7eb !important;
+
+  .text-\[var\(--ink2\)\], .text-\[var\(--ink3\)\], .text-gray-400, .text-slate-400 {
+    color: #374151 !important;
   }
-  .border-\[var\(--line\)\], .border-\[var\(--line2\)\] {
-    border-color: #d1d5db !important;
-  }
-  .text-\[var\(--ink2\)\], .text-\[var\(--ink3\)\] {
-    color: #4b5563 !important;
-  }
-  .text-\[var\(--teal\)\], .text-\[var\(--purple\)\], .text-\[var\(--gold\)\] {
-    color: #1f2937 !important;
+
+  .text-\[var\(--teal\)\], .text-\[var\(--purple\)\], .text-\[var\(--gold\)\], .text-\[var\(--pink\)\] {
+    color: #111827 !important;
     font-weight: 700 !important;
   }
+
+  .border-\[var\(--line\)\],
+  .border-\[var\(--line2\)\],
+  [class*="border-"],
+  table, tr, td, th {
+    border-color: #e5e7eb !important;
+  }
+
+  /* 8. Inputs, Essay Textareas, and Forms */
+  textarea,
+  input[type="text"] {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: none !important;
+    height: auto !important;
+    min-height: fit-content !important;
+    overflow: visible !important;
+    white-space: pre-wrap !important;
+  }
+
+  /* 9. Layout & Page Break Cleanliness */
+  .fixed,
+  .sticky {
+    position: static !important;
+  }
+
   .page-break {
     page-break-before: always;
+    break-before: page;
   }
-  table, tr, td, th {
-    border-color: #d1d5db !important;
-    color: #111827 !important;
+
+  article,
+  section,
+  .question-card,
+  table,
+  tr,
+  blockquote,
+  pre {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 }
