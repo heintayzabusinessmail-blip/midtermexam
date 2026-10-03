@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import DetailedResultView from './DetailedResultView';
 import TeacherPortal, { saveSingleSubmission, evaluateCEFR } from './TeacherPortal';
+import CircularProgressIndicator from './CircularProgressIndicator';
+import EssayWordCountGauge from './EssayWordCountGauge';
 import {
   CONFIG,
   PARTS,
@@ -642,6 +644,23 @@ export default function App() {
   const currentQ = Q[state.idx];
   const currentPart = PARTS.find((p) => p.n === currentQ.p);
   const totalAnsweredCount = useMemo(() => Q.filter((_, idx) => isQuestionAnswered(idx)).length, [state.ans, Q]);
+  const completionPercentage = useMemo(() => {
+    return Q.length > 0 ? Math.round((totalAnsweredCount / Q.length) * 100) : 0;
+  }, [totalAnsweredCount, Q.length]);
+
+  const examPartsBreakdown = useMemo(() => {
+    return PARTS.map((part) => {
+      const questionsInPart = Q.filter((q) => q.p === part.n);
+      const answeredInPart = questionsInPart.filter((q) => isQuestionAnswered(q.i)).length;
+      return {
+        partNumber: part.n,
+        partTitle: part.title,
+        answered: answeredInPart,
+        total: questionsInPart.length,
+        isComplete: questionsInPart.length > 0 && answeredInPart === questionsInPart.length,
+      };
+    });
+  }, [Q, state.ans]);
 
   // Render Screens
   return (
@@ -678,6 +697,18 @@ export default function App() {
               </div>
             </div>
           </div>
+
+          {/* Circular Progress Indicator for Exam Completion across all parts */}
+          {screen === 'exam' && (
+            <div className="flex items-center px-3 py-1 rounded-2xl bg-[var(--card2)]/90 border border-[var(--line)] shadow-sm">
+              <CircularProgressIndicator
+                percentage={completionPercentage}
+                answered={totalAnsweredCount}
+                total={Q.length}
+                partsBreakdown={examPartsBreakdown}
+              />
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <button
@@ -975,8 +1006,9 @@ export default function App() {
                 <span className="truncate max-w-[120px] sm:max-w-[200px]">{state.name || 'Candidate'}</span>
               </div>
 
-              <div className="bg-[var(--card2)] border border-[var(--line)] rounded-full px-3.5 py-1 text-xs font-bold text-[var(--ink2)]">
-                {totalAnsweredCount} / {Q.length} answered
+              <div className="bg-[var(--card2)] border border-[var(--line)] rounded-full px-3.5 py-1 text-xs font-bold text-[var(--ink2)] flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[var(--teal)] animate-pulse" />
+                <span>{totalAnsweredCount} / {Q.length} answered ({completionPercentage}%)</span>
               </div>
 
               <div
@@ -1376,34 +1408,86 @@ export default function App() {
 
                     {/* ESSAY */}
                     {currentQ.t === 'essay' && (
-                      <div className="space-y-3">
-                        <div
-                          className="text-xs sm:text-sm text-[var(--ink)] leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: currentQ.q }}
+                      <div className="space-y-4">
+                        {/* Essay Prompt Card */}
+                        <div className="bg-[var(--card2)] border border-[var(--line)] rounded-2xl p-4 sm:p-5 space-y-2.5">
+                          <div className="flex items-center justify-between text-xs text-[var(--ink3)] font-bold flex-wrap gap-2">
+                            <span className="flex items-center gap-1.5 text-[var(--purple)]">
+                              <span>✍️</span> Part 8 Writing Prompt (Cambridge B2)
+                            </span>
+                            <span className="bg-[var(--purple)]/10 text-[var(--purple)] px-2.5 py-0.5 rounded-full border border-[var(--purple)]/20">
+                              Marked by {CONFIG.teacher} · 10 pts max
+                            </span>
+                          </div>
+                          <div
+                            className="text-xs sm:text-sm text-[var(--ink)] leading-relaxed font-medium"
+                            dangerouslySetInnerHTML={{ __html: currentQ.q }}
+                          />
+                        </div>
+
+                        {/* Visual Dynamic Word Count Gauge */}
+                        <EssayWordCountGauge
+                          text={state.ans[state.idx] || ''}
+                          minWords={currentQ.min || 180}
+                          maxWords={currentQ.max || 220}
                         />
-                        <textarea
-                          rows={11}
-                          value={state.ans[state.idx] || ''}
-                          onChange={(e) => {
-                            saveState({ ans: { ...state.ans, [state.idx]: e.target.value } });
-                          }}
-                          placeholder="Write your argument here…"
-                          className="w-full bg-[var(--card2)] border border-[var(--line)] rounded-xl p-4 text-xs sm:text-sm focus:border-[var(--teal)] outline-none leading-relaxed"
-                        />
-                        <div className="flex justify-between items-center text-xs text-[var(--ink3)]">
-                          <span>Marked by {CONFIG.teacher} (10 pts)</span>
-                          <span
-                            className={
+
+                        {/* Textarea for Writing */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs text-[var(--ink3)]">
+                            <span className="font-semibold text-[var(--ink2)]">Your Essay Draft:</span>
+                            <span className="text-[11px] text-[var(--ink3)]">
+                              Use paragraphs with line breaks for clarity
+                            </span>
+                          </div>
+                          <textarea
+                            rows={12}
+                            value={state.ans[state.idx] || ''}
+                            onChange={(e) => {
+                              saveState({ ans: { ...state.ans, [state.idx]: e.target.value } });
+                            }}
+                            placeholder="Type your essay here… Begin with an introductory sentence, develop arguments for and against with clear examples, and conclude with your own reasoned perspective."
+                            className={`w-full bg-[var(--card2)] border rounded-2xl p-4 sm:p-5 text-xs sm:text-sm outline-none leading-relaxed transition-all duration-300 font-sans ${
                               (() => {
                                 const wc = (state.ans[state.idx] || '').trim().split(/\s+/).filter(Boolean).length;
-                                return wc >= (currentQ.min || 180) && wc <= (currentQ.max || 220)
-                                  ? 'text-[var(--teal)] font-bold'
-                                  : '';
+                                if (wc >= (currentQ.min || 180) && wc <= (currentQ.max || 220)) {
+                                  return 'border-emerald-500/60 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20';
+                                }
+                                if (wc > (currentQ.max || 220)) {
+                                  return 'border-amber-500/60 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20';
+                                }
+                                if (wc > 0) {
+                                  return 'border-rose-400/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20';
+                                }
+                                return 'border-[var(--line)] focus:border-[var(--teal)]';
                               })()
-                            }
-                          >
-                            {(state.ans[state.idx] || '').trim().split(/\s+/).filter(Boolean).length} words · target {currentQ.min}–{currentQ.max}
-                          </span>
+                            }`}
+                          />
+                        </div>
+
+                        {/* Essay Writing Guidelines & Structure Checklist */}
+                        <div className="bg-[var(--card)] border border-[var(--line)] rounded-xl p-3.5 text-xs text-[var(--ink2)] space-y-1.5">
+                          <div className="font-extrabold text-[var(--teal)] flex items-center gap-1.5">
+                            <span>💡</span> Cambridge B2 Essay Structure Checklist:
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1 text-[var(--ink3)]">
+                            <div className="flex items-start gap-1.5">
+                              <span className="text-[var(--teal)] font-bold">1.</span>
+                              <span><b>Introduction:</b> Rephrase the prompt and state that there are two sides.</span>
+                            </div>
+                            <div className="flex items-start gap-1.5">
+                              <span className="text-[var(--teal)] font-bold">2.</span>
+                              <span><b>Arguments For:</b> Present points supporting the view with reasons.</span>
+                            </div>
+                            <div className="flex items-start gap-1.5">
+                              <span className="text-[var(--teal)] font-bold">3.</span>
+                              <span><b>Arguments Against:</b> Provide counter-arguments or alternative view.</span>
+                            </div>
+                            <div className="flex items-start gap-1.5">
+                              <span className="text-[var(--teal)] font-bold">4.</span>
+                              <span><b>Conclusion:</b> Summarize both sides and give your clear opinion.</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}

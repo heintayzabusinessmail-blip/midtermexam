@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { CONFIG, PARTS, PASSAGES, LISTENINGS, Question } from './examData';
+import ExamSummaryModal from './ExamSummaryModal';
 
 interface DetailedResultViewProps {
   state: any;
@@ -22,8 +23,10 @@ export default function DetailedResultView({ state, Q, toast, onRetake }: Detail
   const [activeTab, setActiveTab] = useState<'feedback' | 'questions' | 'essay' | 'overview' | 'proctor'>('feedback');
   const [selectedPartFilter, setSelectedPartFilter] = useState<number | 'all'>('all');
   const [onlyMistakes, setOnlyMistakes] = useState<boolean>(false);
+  const [questionSearch, setQuestionSearch] = useState<string>('');
   const [expandedPart, setExpandedPart] = useState<number | null>(null);
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
+  const [showSummaryModal, setShowSummaryModal] = useState<boolean>(true);
 
   // Teacher feedback & grading state for Part 8 Essay
   const [teacherScore, setTeacherScore] = useState<string>('8.5');
@@ -100,14 +103,30 @@ export default function DetailedResultView({ state, Q, toast, onRetake }: Detail
     };
   }, [res.pct]);
 
+  // Total mistakes count
+  const totalMistakesCount = useMemo(() => {
+    return (res.rows || []).filter((r: any) => !r.ok).length;
+  }, [res.rows]);
+
   // Questions filtered for review
   const filteredQuestions = useMemo(() => {
     return (res.rows || []).filter((r: any) => {
       if (selectedPartFilter !== 'all' && r.p !== selectedPartFilter) return false;
       if (onlyMistakes && r.ok) return false;
+      if (questionSearch.trim()) {
+        const query = questionSearch.toLowerCase().trim();
+        const numMatch = `q${r.i + 1}`.includes(query) || `${r.i + 1}` === query;
+        const origQ = Q.find((item) => item.i === r.i);
+        const textMatch = (origQ?.q || '').toLowerCase().includes(query);
+        const focusMatch = (r.s || '').toLowerCase().includes(query);
+        const yourMatch = (r.your || '').toLowerCase().includes(query);
+        const rightMatch = (r.right || '').toLowerCase().includes(query);
+        const expMatch = (r.e || '').toLowerCase().includes(query);
+        if (!numMatch && !textMatch && !focusMatch && !yourMatch && !rightMatch && !expMatch) return false;
+      }
       return true;
     });
-  }, [res.rows, selectedPartFilter, onlyMistakes]);
+  }, [res.rows, selectedPartFilter, onlyMistakes, questionSearch, Q]);
 
   // Part-specific feedback texts and diagnostics - simple, encouraging, clear
   const getPartFeedback = (partNum: number) => {
@@ -950,6 +969,14 @@ export default function DetailedResultView({ state, Q, toast, onRetake }: Detail
             </button>
 
             <button
+              onClick={() => setShowSummaryModal(true)}
+              className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-[var(--card2)] border border-[var(--teal)]/40 text-xs font-black text-[var(--teal)] hover:bg-[var(--teal)] hover:text-[#08111F] transition no-print flex items-center justify-center gap-1.5 shadow-sm"
+              title="View concise exam performance summary and CEFR level modal"
+            >
+              <span>📊</span> Score Summary
+            </button>
+
+            <button
               onClick={() => setShowPrintModal(true)}
               className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-[var(--card2)] border border-[var(--line)] text-xs font-bold text-[var(--ink)] hover:border-[var(--teal)] no-print"
             >
@@ -979,13 +1006,22 @@ export default function DetailedResultView({ state, Q, toast, onRetake }: Detail
 
         <button
           onClick={() => setActiveTab('questions')}
-          className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-extrabold whitespace-nowrap transition border-b-2 ${
+          className={`px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-extrabold whitespace-nowrap transition border-b-2 flex items-center gap-1.5 ${
             activeTab === 'questions'
               ? 'border-[var(--teal)] text-[var(--teal)] bg-[var(--card)]'
               : 'border-transparent text-[var(--ink2)] hover:text-[var(--ink)]'
           }`}
         >
-          📝 Check Answers ({Q.filter((q) => q.t !== 'essay').length})
+          <span>📝</span> Check Answers ({Q.filter((q) => q.t !== 'essay').length})
+          {totalMistakesCount > 0 ? (
+            <span className="px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-400 text-[0.68rem] font-black">
+              {totalMistakesCount} ✗
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-[0.68rem] font-black">
+              All ✓
+            </span>
+          )}
         </button>
 
         <button
@@ -1159,10 +1195,51 @@ export default function DetailedResultView({ state, Q, toast, onRetake }: Detail
       {activeTab === 'questions' && (
         <div className="space-y-4 anim-fade">
           {/* Filter Bar */}
-          <div className="bg-[var(--card)] border border-[var(--line)] rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 flex-wrap">
+          <div className="bg-[var(--card)] border border-[var(--line)] rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-[240px]">
+                <input
+                  type="text"
+                  value={questionSearch}
+                  onChange={(e) => setQuestionSearch(e.target.value)}
+                  placeholder="🔍 Search questions by prompt, grammar focus, answer, or Q# (e.g. Q14)..."
+                  className="w-full bg-[var(--card2)] border border-[var(--line)] rounded-xl px-4 py-2 text-xs text-[var(--ink)] placeholder-[var(--ink3)] focus:outline-none focus:border-[var(--teal)] transition"
+                />
+                {questionSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setQuestionSearch('')}
+                    className="absolute right-3 top-2 text-xs font-bold text-[var(--ink3)] hover:text-[var(--ink)]"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOnlyMistakes(!onlyMistakes)}
+                  className={`px-3 py-2 rounded-xl text-xs font-black border transition flex items-center gap-1.5 ${
+                    onlyMistakes
+                      ? 'bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/20'
+                      : 'bg-[var(--card2)] border-[var(--line)] text-[var(--ink2)] hover:text-[var(--ink)]'
+                  }`}
+                >
+                  <span>{onlyMistakes ? '❌' : '🔍'}</span>
+                  <span>
+                    {onlyMistakes
+                      ? `Showing Mistakes Only (${totalMistakesCount})`
+                      : `Show Mistakes Only (${totalMistakesCount})`}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[var(--line)]">
               <span className="text-xs font-black uppercase tracking-wider text-[var(--ink3)]">Filter Part:</span>
               <button
+                type="button"
                 onClick={() => setSelectedPartFilter('all')}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
                   selectedPartFilter === 'all'
@@ -1175,6 +1252,7 @@ export default function DetailedResultView({ state, Q, toast, onRetake }: Detail
               {PARTS.filter((p) => p.code !== 'Essay').map((p) => (
                 <button
                   key={p.n}
+                  type="button"
                   onClick={() => setSelectedPartFilter(p.n)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
                     selectedPartFilter === p.n
@@ -1186,17 +1264,6 @@ export default function DetailedResultView({ state, Q, toast, onRetake }: Detail
                 </button>
               ))}
             </div>
-
-            <button
-              onClick={() => setOnlyMistakes(!onlyMistakes)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
-                onlyMistakes
-                  ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
-                  : 'bg-[var(--card2)] border-[var(--line)] text-[var(--ink2)] hover:text-[var(--ink)]'
-              }`}
-            >
-              {onlyMistakes ? 'Showing Mistakes Only ✗' : 'Show Mistakes Only'}
-            </button>
           </div>
 
           {/* Questions List */}
@@ -1596,6 +1663,45 @@ export default function DetailedResultView({ state, Q, toast, onRetake }: Detail
           Reset and retake examination
         </button>
       </div>
+
+      {/* ================= EXAM PERFORMANCE SUMMARY MODAL ================= */}
+      <ExamSummaryModal
+        isOpen={showSummaryModal}
+        onClose={() => setShowSummaryModal(false)}
+        result={res}
+        studentName={state.name || 'Candidate'}
+        studentClass={state.cls}
+        cefrEvaluation={cefrEvaluation}
+        onExploreDetails={() => {
+          setActiveTab('questions');
+          setShowSummaryModal(false);
+        }}
+        onCopyTelegram={() => {
+          const autoParts = PARTS.filter((p) => p.code !== 'Essay');
+          let msg = `🎓 HEINFINITY B2 MID-TERM EXAM REPORT\n`;
+          msg += `Student: ${state.name} ${state.cls ? `(${state.cls})` : ''}\n`;
+          msg += `Verification Code: ${res.code}\n`;
+          msg += `Score: ${res.got}/${res.max} (${res.pct}%) — ${cefrEvaluation.band}\n`;
+          msg += `Level: ${cefrEvaluation.level}\n\n`;
+          msg += `📊 Part Scores:\n`;
+          autoParts.forEach((p) => {
+            const pStat = res.perPart ? res.perPart[p.n] : null;
+            msg += `• Part ${p.n} (${p.title}): ${pStat?.got || 0}/${p.pts} pts (${Math.round(((pStat?.got || 0) / p.pts) * 100)}%)\n`;
+          });
+          msg += `• Part 8 (Essay): 10 pts (Marked by Teacher)\n\n`;
+          msg += `📈 Units Mastery:\n`;
+          [1, 2, 3, 4, 5].forEach((u) => {
+            const uStat = res.perUnit ? res.perUnit[u] : { n: 0, right: 0 };
+            const uPct = uStat?.n ? Math.round((uStat.right / uStat.n) * 100) : 0;
+            msg += `• Unit ${u}: ${uStat.right}/${uStat.n} (${uPct}%)\n`;
+          });
+          msg += `\n📷 Proctoring: ${state.camOK ? 'Camera Verified ✓' : 'No Camera'} | Tab switches: ${state.blurs}\n`;
+          msg += `\n--- PART 8 ESSAY (${essayWordCount} words) ---\n${essayAnswer || '(no essay text)'}\n`;
+
+          navigator.clipboard.writeText(msg);
+          toast('✓ Full Exam Report copied! Send to Tr. Hein Tay Za on Telegram');
+        }}
+      />
     </div>
   );
 }

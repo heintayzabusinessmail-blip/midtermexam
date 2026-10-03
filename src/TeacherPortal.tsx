@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { PARTS, CONFIG, Question } from './examData';
+import { PARTS, CONFIG, Question, prepareQuestions } from './examData';
+import VisualEssayRubric from './VisualEssayRubric';
+import CandidateQuestionInspector from './CandidateQuestionInspector';
 
 export interface StudentSubmission {
   id: string;
@@ -587,9 +589,10 @@ export default function TeacherPortal({
   onBack: () => void;
   onViewStudentFullResult?: (sub: StudentSubmission) => void;
 }) {
+  const Q = useMemo(() => prepareQuestions(), []);
   const [submissions, setSubmissions] = useState<StudentSubmission[]>(() => loadAllSubmissions());
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'gradebook' | 'grading' | 'import' | 'analytics'>('gradebook');
+  const [activeTab, setActiveTab] = useState<'gradebook' | 'grading' | 'questions' | 'import' | 'analytics'>('gradebook');
   const [selectedSubId, setSelectedSubId] = useState<string>(submissions[0]?.id || '');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -894,6 +897,22 @@ export default function TeacherPortal({
         </button>
         <button
           type="button"
+          onClick={() => {
+            if (!selectedSubId && submissions.length > 0) {
+              setSelectedSubId(submissions[0].id);
+            }
+            setActiveTab('questions');
+          }}
+          className={`px-4 py-2 rounded-xl text-xs font-extrabold transition shrink-0 flex items-center gap-1.5 ${
+            activeTab === 'questions'
+              ? 'bg-[var(--teal)] text-[#08111F]'
+              : 'bg-[var(--card2)] text-[var(--ink2)] hover:text-[var(--ink)]'
+          }`}
+        >
+          <span>🔍</span> Question Answers (Correct vs Wrong)
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveTab('import')}
           className={`px-4 py-2 rounded-xl text-xs font-extrabold transition shrink-0 ${
             activeTab === 'import'
@@ -1022,6 +1041,17 @@ export default function TeacherPortal({
                           type="button"
                           onClick={() => {
                             setSelectedSubId(sub.id);
+                            setActiveTab('questions');
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-[var(--purple)]/20 text-[var(--purple)] border border-[var(--purple)]/40 font-black text-xs hover:bg-[var(--purple)] hover:text-white transition inline-flex items-center gap-1 shadow-sm"
+                          title={`Inspect all questions answered by ${sub.name} with correct and wrong answers`}
+                        >
+                          <span>🔍</span> View Answers
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedSubId(sub.id);
                             setActiveTab('grading');
                           }}
                           className="px-2.5 py-1.5 rounded-lg bg-[var(--tealsoft)] text-[var(--teal)] font-black text-xs hover:bg-[var(--teal)] hover:text-[#08111F] transition"
@@ -1144,98 +1174,28 @@ export default function TeacherPortal({
               </div>
             </div>
 
-            {/* Rubric Inputs */}
-            <div className="bg-[var(--card)] border-2 border-[var(--teal)] rounded-2xl p-6 shadow-xl space-y-5">
+            {/* Visual Essay Rubric Component */}
+            <VisualEssayRubric
+              rubric={editRubric}
+              onChange={setEditRubric}
+              wordCount={currentSelectedSub.essayWordCount || currentSelectedSub.essayText?.split(/\s+/).length || 0}
+              studentName={currentSelectedSub.name}
+            />
+
+            {/* Feedback & Grading Action Box */}
+            <div className="bg-[var(--card)] border border-[var(--line2)] rounded-2xl p-6 shadow-xl space-y-5">
               <div className="flex items-center justify-between border-b border-[var(--line)] pb-3 flex-wrap gap-2">
                 <div>
                   <div className="text-[0.68rem] uppercase font-black tracking-wider text-[var(--teal)]">
-                    Teacher Evaluation (Tr. Hein Tay Za)
+                    Feedback & Official Endorsement
                   </div>
-                  <h3 className="text-base font-extrabold text-[var(--ink)]">4-Criteria Scoring Rubric (10 pts)</h3>
+                  <h3 className="text-base font-extrabold text-[var(--ink)]">Teacher Review by Tr. Hein Tay Za</h3>
                 </div>
                 <div className="text-right">
                   <div className="text-[0.68rem] text-[var(--ink3)] font-bold uppercase">Awarded Essay Score</div>
                   <div className="text-2xl font-black text-[var(--teal)]">
                     {(editRubric.task + editRubric.coherence + editRubric.lexical + editRubric.grammar).toFixed(1)} / 10
                   </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* 1. Task Achievement */}
-                <div className="p-3.5 rounded-xl bg-[var(--card2)] border border-[var(--line)] space-y-2">
-                  <div className="flex justify-between items-center text-xs font-bold text-[var(--ink)]">
-                    <span>1. Task Achievement</span>
-                    <span className="text-[var(--teal)] font-black">{editRubric.task} / 2.5</span>
-                  </div>
-                  <select
-                    value={editRubric.task}
-                    onChange={(e) => setEditRubric({ ...editRubric, task: parseFloat(e.target.value) })}
-                    className="w-full bg-[var(--card)] border border-[var(--line2)] text-[var(--ink)] text-xs rounded-lg p-2 font-bold focus:border-[var(--teal)] outline-none"
-                  >
-                    <option value="2.5">2.5 pts (Excellent - full prompt answered)</option>
-                    <option value="2.0">2.0 pts (Good - both sides addressed)</option>
-                    <option value="1.5">1.5 pts (Satisfactory - some points missing)</option>
-                    <option value="1.0">1.0 pts (Weak - only one side covered)</option>
-                    <option value="0.5">0.5 pts (Off-topic / minimal)</option>
-                  </select>
-                </div>
-
-                {/* 2. Coherence */}
-                <div className="p-3.5 rounded-xl bg-[var(--card2)] border border-[var(--line)] space-y-2">
-                  <div className="flex justify-between items-center text-xs font-bold text-[var(--ink)]">
-                    <span>2. Coherence & Cohesion</span>
-                    <span className="text-[var(--teal)] font-black">{editRubric.coherence} / 2.5</span>
-                  </div>
-                  <select
-                    value={editRubric.coherence}
-                    onChange={(e) => setEditRubric({ ...editRubric, coherence: parseFloat(e.target.value) })}
-                    className="w-full bg-[var(--card)] border border-[var(--line2)] text-[var(--ink)] text-xs rounded-lg p-2 font-bold focus:border-[var(--teal)] outline-none"
-                  >
-                    <option value="2.5">2.5 pts (Excellent 4-paragraph flow & linkers)</option>
-                    <option value="2.0">2.0 pts (Good structure & clear transitions)</option>
-                    <option value="1.5">1.5 pts (Basic linking words used)</option>
-                    <option value="1.0">1.0 pts (Weak paragraphing / disjointed)</option>
-                    <option value="0.5">0.5 pts (No clear paragraph structure)</option>
-                  </select>
-                </div>
-
-                {/* 3. Lexical */}
-                <div className="p-3.5 rounded-xl bg-[var(--card2)] border border-[var(--line)] space-y-2">
-                  <div className="flex justify-between items-center text-xs font-bold text-[var(--ink)]">
-                    <span>3. Lexical Resource (Vocab)</span>
-                    <span className="text-[var(--teal)] font-black">{editRubric.lexical} / 2.5</span>
-                  </div>
-                  <select
-                    value={editRubric.lexical}
-                    onChange={(e) => setEditRubric({ ...editRubric, lexical: parseFloat(e.target.value) })}
-                    className="w-full bg-[var(--card)] border border-[var(--line2)] text-[var(--ink)] text-xs rounded-lg p-2 font-bold focus:border-[var(--teal)] outline-none"
-                  >
-                    <option value="2.5">2.5 pts (Rich B2 vocabulary & collocations)</option>
-                    <option value="2.0">2.0 pts (Good topic-related words)</option>
-                    <option value="1.5">1.5 pts (Repetitive vocabulary)</option>
-                    <option value="1.0">1.0 pts (Frequent word choice errors)</option>
-                    <option value="0.5">0.5 pts (Limited basic vocabulary)</option>
-                  </select>
-                </div>
-
-                {/* 4. Grammar */}
-                <div className="p-3.5 rounded-xl bg-[var(--card2)] border border-[var(--line)] space-y-2">
-                  <div className="flex justify-between items-center text-xs font-bold text-[var(--ink)]">
-                    <span>4. Grammar Range & Accuracy</span>
-                    <span className="text-[var(--teal)] font-black">{editRubric.grammar} / 2.5</span>
-                  </div>
-                  <select
-                    value={editRubric.grammar}
-                    onChange={(e) => setEditRubric({ ...editRubric, grammar: parseFloat(e.target.value) })}
-                    className="w-full bg-[var(--card)] border border-[var(--line2)] text-[var(--ink)] text-xs rounded-lg p-2 font-bold focus:border-[var(--teal)] outline-none"
-                  >
-                    <option value="2.5">2.5 pts (Complex structures, few errors)</option>
-                    <option value="2.0">2.0 pts (Good variety of tenses & clauses)</option>
-                    <option value="1.5">1.5 pts (Some basic grammar mistakes)</option>
-                    <option value="1.0">1.0 pts (Noticeable tense & agreement errors)</option>
-                    <option value="0.5">0.5 pts (Frequent errors impeding meaning)</option>
-                  </select>
                 </div>
               </div>
 
@@ -1355,42 +1315,28 @@ export default function TeacherPortal({
               )}
             </div>
 
-            {/* Answer Itemization Table if available */}
-            {currentSelectedSub.rows && currentSelectedSub.rows.length > 0 && (
-              <div className="bg-[var(--card)] border border-[var(--line)] rounded-2xl p-5 shadow-xl space-y-3">
-                <h3 className="text-sm font-extrabold text-[var(--ink)] flex items-center gap-2">
-                  <span>📋</span> Detailed Question-by-Question Answers
-                </h3>
-                <div className="max-h-72 overflow-y-auto pr-1">
-                  <table className="w-full text-xs text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-[var(--line)] bg-[var(--card2)] text-[var(--ink3)]">
-                        <th className="p-2">#</th>
-                        <th className="p-2">Part</th>
-                        <th className="p-2">Focus</th>
-                        <th className="p-2">Candidate Answer</th>
-                        <th className="p-2">Correct Answer</th>
-                        <th className="p-2 text-center">Result</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentSelectedSub.rows.map((row: any) => (
-                        <tr key={row.i} className="border-b border-[var(--line)] hover:bg-[var(--card2)]/50">
-                          <td className="p-2 font-bold">{row.i + 1}</td>
-                          <td className="p-2 font-bold text-[var(--purple)]">P{row.p}</td>
-                          <td className="p-2 text-[var(--ink2)]">{row.s}</td>
-                          <td className="p-2 font-medium text-[var(--ink)]">{row.your}</td>
-                          <td className="p-2 font-bold text-[var(--teal)]">{row.right}</td>
-                          <td className="p-2 text-center font-bold">{row.ok ? '✅' : '❌'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+            {/* Candidate Question-by-Question Answers Inspector */}
+            <div className="pt-2">
+              <CandidateQuestionInspector
+                submission={currentSelectedSub}
+                Q={Q}
+                toast={showToast}
+              />
+            </div>
           </div>
         </div>
+      )}
+
+      {/* ================= TAB: QUESTION ANSWERS & ITEM ANALYSIS ================= */}
+      {activeTab === 'questions' && currentSelectedSub && (
+        <CandidateQuestionInspector
+          submission={currentSelectedSub}
+          allSubmissions={submissions}
+          onSelectSubmission={(id) => setSelectedSubId(id)}
+          Q={Q}
+          toast={showToast}
+          onOpenGrading={() => setActiveTab('grading')}
+        />
       )}
 
       {/* ================= TAB 3: IMPORT SUBMISSIONS ================= */}
