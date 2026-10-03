@@ -9,8 +9,8 @@ export interface EssayWordCountGaugeProps {
 
 export const EssayWordCountGauge: React.FC<EssayWordCountGaugeProps> = ({
   text,
-  minWords = 180,
-  maxWords = 220,
+  minWords = 120,
+  maxWords = 180,
   className = '',
 }) => {
   // Analyze text stats
@@ -35,7 +35,7 @@ export const EssayWordCountGauge: React.FC<EssayWordCountGaugeProps> = ({
   }, [words, minWords, maxWords]);
 
   // Max scale for the gauge (at least maxWords + 30 or words + 10)
-  const scaleMax = Math.max(maxWords + 30, words + 10, 250);
+  const scaleMax = Math.max(maxWords + 30, words + 10, 200);
 
   // Percentage for the gauge bar (0 to 100%)
   const fillPercentage = Math.min(100, Math.max(0, (words / scaleMax) * 100));

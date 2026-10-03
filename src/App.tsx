@@ -3,6 +3,7 @@ import DetailedResultView from './DetailedResultView';
 import TeacherPortal, { saveSingleSubmission, evaluateCEFR } from './TeacherPortal';
 import CircularProgressIndicator from './CircularProgressIndicator';
 import EssayWordCountGauge from './EssayWordCountGauge';
+import WritingHelper from './WritingHelper';
 import {
   CONFIG,
   PARTS,
@@ -1428,8 +1429,18 @@ export default function App() {
                         {/* Visual Dynamic Word Count Gauge */}
                         <EssayWordCountGauge
                           text={state.ans[state.idx] || ''}
-                          minWords={currentQ.min || 180}
-                          maxWords={currentQ.max || 220}
+                          minWords={currentQ.min || 120}
+                          maxWords={currentQ.max || 180}
+                        />
+
+                        {/* Interactive Writing Assistant & Scaffolding Helper */}
+                        <WritingHelper
+                          currentText={state.ans[state.idx] || ''}
+                          onUpdateText={(newText) => {
+                            saveState({ ans: { ...state.ans, [state.idx]: newText } });
+                          }}
+                          minWords={currentQ.min || 120}
+                          maxWords={currentQ.max || 180}
                         />
 
                         {/* Textarea for Writing */}
@@ -1446,14 +1457,14 @@ export default function App() {
                             onChange={(e) => {
                               saveState({ ans: { ...state.ans, [state.idx]: e.target.value } });
                             }}
-                            placeholder="Type your essay here… Begin with an introductory sentence, develop arguments for and against with clear examples, and conclude with your own reasoned perspective."
+                            placeholder="Type your essay here… Begin with an introductory sentence, develop your ideas with clear reasons, and conclude with your own perspective."
                             className={`w-full bg-[var(--card2)] border rounded-2xl p-4 sm:p-5 text-xs sm:text-sm outline-none leading-relaxed transition-all duration-300 font-sans ${
                               (() => {
                                 const wc = (state.ans[state.idx] || '').trim().split(/\s+/).filter(Boolean).length;
-                                if (wc >= (currentQ.min || 180) && wc <= (currentQ.max || 220)) {
+                                if (wc >= (currentQ.min || 120) && wc <= (currentQ.max || 180)) {
                                   return 'border-emerald-500/60 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20';
                                 }
-                                if (wc > (currentQ.max || 220)) {
+                                if (wc > (currentQ.max || 180)) {
                                   return 'border-amber-500/60 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20';
                                 }
                                 if (wc > 0) {
