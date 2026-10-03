@@ -615,10 +615,6 @@ export default function DetailedResultView({ state, Q, toast, onRetake }: Detail
     <div class="page-break"></div>
 
     <div class="section-title">✍️ Part 8: Student Essay Submission (${essayWordCount} words)</div>
-    <div style="font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 6px;">Essay Question:</div>
-    <div style="font-size: 13px; font-style: italic; color: #334155; margin-bottom: 12px; padding-left: 12px; border-left: 3px solid #0d9488;">
-      &ldquo;Some people think that hard work is the most important factor in achieving success, while others believe that natural talent and chance play a greater role. Discuss both views and give your opinion.&rdquo;
-    </div>
     <div class="essay-box">${escapeHtml(essayAnswer || '(No essay text provided)')}</div>
 
     <!-- Teacher Hein Tay Za's Essay Assessment Box -->
@@ -1401,14 +1397,6 @@ export default function DetailedResultView({ state, Q, toast, onRetake }: Detail
                   {essayWordCount} words · (Goal: 180–220 words)
                 </span>
               </div>
-            </div>
-
-            {/* Essay Prompt */}
-            <div className="p-4 rounded-xl bg-[var(--card2)] border border-[var(--line)] text-xs sm:text-sm text-[var(--ink)] space-y-1.5">
-              <div className="font-black text-[var(--gold)]">Essay Question:</div>
-              <p className="leading-relaxed">
-                &ldquo;Some people think that hard work is the most important factor in achieving success, while others believe that natural talent and chance play a greater role. Discuss both views and give your opinion.&rdquo;
-              </p>
             </div>
 
             {/* Student Essay Output */}

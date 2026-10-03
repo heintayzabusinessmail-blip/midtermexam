@@ -1159,7 +1159,7 @@ export default function App() {
                       U{currentQ.u} · {currentQ.l}
                     </span>
                     <span className="ml-auto px-2 py-0.5 rounded-full bg-[var(--card2)] text-[var(--ink2)] text-[0.65rem] font-bold">
-                      1 pt
+                      {currentQ.p === 8 ? '10 pts' : '1 pt'}
                     </span>
                   </div>
 
@@ -1519,20 +1519,14 @@ export default function App() {
                     {/* ESSAY */}
                     {currentQ.t === 'essay' && (
                       <div className="space-y-4">
-                        {/* Essay Prompt Card */}
-                        <div className="bg-[var(--card2)] border border-[var(--line)] rounded-2xl p-4 sm:p-5 space-y-2.5">
-                          <div className="flex items-center justify-between text-xs text-[var(--ink3)] font-bold flex-wrap gap-2">
-                            <span className="flex items-center gap-1.5 text-[var(--purple)]">
-                              <span>✍️</span> Part 8 Writing Prompt (Cambridge B2)
-                            </span>
-                            <span className="bg-[var(--purple)]/10 text-[var(--purple)] px-2.5 py-0.5 rounded-full border border-[var(--purple)]/20">
-                              Marked by {CONFIG.teacher} · 10 pts max
-                            </span>
-                          </div>
-                          <div
-                            className="text-xs sm:text-sm text-[var(--ink)] leading-relaxed font-medium"
-                            dangerouslySetInnerHTML={{ __html: currentQ.q }}
-                          />
+                        {/* Essay Writing Header without prompts */}
+                        <div className="bg-[var(--card2)] border border-[var(--line)] rounded-2xl p-4 sm:p-5 flex items-center justify-between text-xs text-[var(--ink3)] font-bold flex-wrap gap-2">
+                          <span className="flex items-center gap-2 text-[var(--purple)] font-black text-sm">
+                            <span>✍️</span> Part 8 · Essay Writing
+                          </span>
+                          <span className="bg-[var(--purple)]/10 text-[var(--purple)] px-3 py-1 rounded-full border border-[var(--purple)]/20 text-xs font-bold">
+                            Marked by {CONFIG.teacher} · 10 pts max
+                          </span>
                         </div>
 
                         {/* Visual Dynamic Word Count Gauge */}
@@ -1574,7 +1568,7 @@ export default function App() {
                               onChange={(e) => {
                                 handleEssayChange(e.target.value, state.idx);
                               }}
-                              placeholder="Type your essay here… Begin with an introductory sentence, develop your ideas with clear reasons, and conclude with your own perspective."
+                              placeholder="Type your essay here…"
                               className={`w-full bg-[var(--card2)] border rounded-2xl p-4 sm:p-5 pb-12 sm:pb-12 text-xs sm:text-sm outline-none leading-relaxed transition-all duration-300 font-sans ${
                                 (() => {
                                   const wc = (state.ans[state.idx] || '').trim().split(/\s+/).filter(Boolean).length;

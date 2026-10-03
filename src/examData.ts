@@ -995,19 +995,11 @@ export const RAW_QUESTIONS: Omit<Question, 'i'>[] = [
 
   /* ================= PART 8 · ESSAY WRITING (1 ESSAY) ================= */
   {
-    p: 8, u: 1, l: '1A/3A', s: 'Writing: Inspiring Person Profile or Argument', d: 'medium', t: 'essay',
-    q: 'Choose <b>ONE</b> of the two options below to write about (Target: <b>120–180 words</b>):<br><br>' +
-       '<b>⭐ Option A (Recommended — Profile of an Inspiring Person):</b><br>' +
-       'Write about someone you admire (e.g. an innovator like Jony Ive, an astronomer like Jocelyn Bell-Burnell, an education advocate like Malala, an athlete, a teacher, or a family member).<br>' +
-       '• State who the person is and why they inspire you.<br>' +
-       '• Mention their major achievements.<br>' +
-       '• Describe the challenges they faced and how they overcame them.<br>' +
-       '• Use at least 4 character adjectives (e.g. <i>determined, ambitious, resilient, influential, creative, brave</i>).<br><br>' +
-       '<b>⚖️ Option B (Discussion — Talent vs. Practice):</b><br>' +
-       'Discuss whether natural talent or hard work and deliberate practice is more important for success. Give reasons and examples, and state your own conclusion.',
+    p: 8, u: 1, l: '1A/3A', s: 'Essay Writing', d: 'medium', t: 'essay',
+    q: '',
     min: 120,
     max: 180,
-    e: 'Unit 1A Slide 21 / Unit 3A. Marked on Task achievement (3 pts), Organisation & Coherence (2 pts), Lexical resource / vocabulary (3 pts), and Grammar range & accuracy (2 pts).',
+    e: 'Marked on Task achievement (3 pts), Organisation & Coherence (2 pts), Lexical resource / vocabulary (3 pts), and Grammar range & accuracy (2 pts).',
   },
 ];
 

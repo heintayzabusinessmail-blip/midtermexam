@@ -1162,7 +1162,7 @@ export default function TeacherPortal({
             <div className="bg-[var(--card)] border border-[var(--line)] rounded-2xl p-5 shadow-xl space-y-3">
               <div className="flex items-center justify-between border-b border-[var(--line)] pb-3 flex-wrap gap-2">
                 <h3 className="text-sm font-extrabold text-[var(--ink)] flex items-center gap-2">
-                  <span>📝</span> Part 8 Submitted Essay: Hard Work vs Talent
+                  <span>📝</span> Part 8 Submitted Essay
                 </h3>
                 <div className="text-xs font-bold text-[var(--teal)] bg-[var(--tealsoft)] px-2.5 py-1 rounded-lg">
                   Word Count: {currentSelectedSub.essayWordCount || currentSelectedSub.essayText?.split(/\s+/).length || 0} words
